@@ -294,8 +294,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
             # Optimize
             if ni % accumulate == 0:
-                scaler.step(optimizer)  # optimizer.step
-                scaler.update()
+                optimizer.step()  # optimizer.step
                 optimizer.zero_grad()
                 if ema:
                     ema.update(model)
@@ -456,8 +455,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='yolor_p6.pt', help='initial weights path')
-    parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
+    parser.add_argument('--weights', type=str, default='', help='initial weights path')
+    parser.add_argument('--cfg', type=str, default='yolor_p6.cfg', help='model.yaml path')
     parser.add_argument('--data', type=str, default='data/coco.yaml', help='data.yaml path')
     parser.add_argument('--hyp', type=str, default='data/hyp.scratch.1280.yaml', help='hyperparameters path')
     parser.add_argument('--epochs', type=int, default=300)
@@ -533,7 +532,7 @@ if __name__ == '__main__':
         tb_writer = None  # init loggers
         if opt.global_rank in [-1, 0]:
             logger.info(f'Start Tensorboard with "tensorboard --logdir {opt.project}", view at http://localhost:6006/')
-            tb_writer = SummaryWriter(opt.save_dir)  # Tensorboard
+            # tb_writer = SummaryWriter(opt.save_dir)  # Tensorboard
         train(hyp, opt, device, tb_writer, wandb)
 
     # Evolve hyperparameters (optional)

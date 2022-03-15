@@ -186,7 +186,7 @@ def clip_coords(boxes, img_shape):
 
 def bbox_iou(box1, box2, x1y1x2y2=True, GIoU=False, DIoU=False, CIoU=False, EIoU=False, ECIoU=False, eps=1e-9):
     # Returns the IoU of box1 to box2. box1 is 4, box2 is nx4
-    box2 = box2.T
+    box2 = torch.transpose(box2, 0, 1)
 
     # Get the coordinates of bounding boxes
     if x1y1x2y2:  # x1, y1, x2, y2 = box1
@@ -261,8 +261,8 @@ def box_iou(box1, box2):
         # box = 4xn
         return (box[2] - box[0]) * (box[3] - box[1])
 
-    area1 = box_area(box1.T)
-    area2 = box_area(box2.T)
+    area1 = box_area(torch.transpose(box1, 0, 1))
+    area2 = box_area(torch.transpose(box2, 0, 1))
 
     # inter(N,M) = (rb(N,M,2) - lt(N,M,2)).clamp(0).prod(2)
     inter = (torch.min(box1[:, None, 2:], box2[:, 2:]) - torch.max(box1[:, None, :2], box2[:, :2])).clamp(0).prod(2)
@@ -313,7 +313,7 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
 
         # Detections matrix nx6 (xyxy, conf, cls)
         if multi_label:
-            i, j = (x[:, 5:] > conf_thres).nonzero(as_tuple=False).T
+            i, j = torch.transpose(x[:, 5:] > conf_thres, 0, 1).nonzero(as_tuple=False)
             x = torch.cat((box[i], x[i, j + 5, None], j[:, None].float()), 1)
         else:  # best class only
             conf, j = x[:, 5:].max(1, keepdim=True)

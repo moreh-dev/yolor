@@ -96,7 +96,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             pxy = ps[:, :2].sigmoid() * 2. - 0.5
             pwh = (ps[:, 2:4].sigmoid() * 2) ** 2 * anchors[i]
             pbox = torch.cat((pxy, pwh), 1).to(device)  # predicted box
-            iou = bbox_iou(pbox.T, tbox[i], x1y1x2y2=False, CIoU=True)  # iou(prediction, target)
+            iou = bbox_iou(torch.transpose(pbox, 0, 1), tbox[i], x1y1x2y2=False, CIoU=True)  # iou(prediction, target)
             lbox += (1.0 - iou).mean()  # iou loss
 
             # Objectness
@@ -150,21 +150,21 @@ def build_targets(p, targets, model):
             # overlaps
             gxy = t[:, 2:4]  # grid xy
             z = torch.zeros_like(gxy)
-            j, k = ((gxy % 1. < g) & (gxy > 1.)).T
-            l, m = ((gxy % 1. > (1 - g)) & (gxy < (gain[[2, 3]] - 1.))).T
+            j, k = torch.transpose((gxy % 1. < g) & (gxy > 1.), 0, 1)
+            l, m = torch.transpose((gxy % 1. > (1 - g)) & (gxy < (gain[[2, 3]] - 1.)), 0, 1)
             a, t = torch.cat((a, a[j], a[k], a[l], a[m]), 0), torch.cat((t, t[j], t[k], t[l], t[m]), 0)
             offsets = torch.cat((z, z[j] + off[0], z[k] + off[1], z[l] + off[2], z[m] + off[3]), 0) * g
 
         # Define
-        b, c = t[:, :2].long().T  # image, class
+        b, c = torch.transpose(t[:, :2].long(), 0, 1)  # image, class
         gxy = t[:, 2:4]  # grid xy
         gwh = t[:, 4:6]  # grid wh
         gij = (gxy - offsets).long()
-        gi, gj = gij.T  # grid xy indices
+        gi, gj = torch.transpose(gij, 0, 1)  # grid xy indices
 
         # Append
         #indices.append((b, a, gj, gi))  # image, anchor, grid indices
-        indices.append((b, a, gj.clamp_(0, gain[3] - 1), gi.clamp_(0, gain[2] - 1)))  # image, anchor, grid indices
+        indices.append((b, a, torch.clamp(gj, 0, gain[3].item() - 1), torch.clamp(gi, 0, gain[2].item() - 1)))  # image, anchor, grid indices
         tbox.append(torch.cat((gxy - gij, gwh), 1))  # box
         anch.append(anchors[a])  # anchors
         tcls.append(c)  # class
