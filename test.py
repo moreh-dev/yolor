@@ -64,11 +64,11 @@ def test(data,
 
         # load model
         try:
-            ckpt = torch.load(weights[0], map_location=device)  # load checkpoint
+            ckpt = torch.load(weights, map_location=device)  # load checkpoint
             ckpt['model'] = {k: v for k, v in ckpt['model'].items() if model.state_dict()[k].numel() == v.numel()}
             model.load_state_dict(ckpt['model'], strict=False)
         except:
-            load_darknet_weights(model, weights[0])
+            load_darknet_weights(model, weights)
         imgsz = check_img_size(imgsz, s=64)  # check img_size
 
     # Half
@@ -195,7 +195,8 @@ def test(data,
                 tbox = xywh2xyxy(labels[:, 1:5]) * whwh
 
                 # Per target class
-                for cls in torch.unique(tcls_tensor):
+                for cls in torch.unique(tcls_tensor.cpu()):
+                    cls = cls.to(tcls_tensor.device)
                     ti = (cls == tcls_tensor).nonzero(as_tuple=False).view(-1)  # prediction indices
                     pi = (cls == pred[:, 5]).nonzero(as_tuple=False).view(-1)  # target indices
 
@@ -257,7 +258,7 @@ def test(data,
     # Save JSON
     if save_json and len(jdict):
         w = Path(weights[0] if isinstance(weights, list) else weights).stem if weights is not None else ''  # weights
-        anno_json = glob.glob('../coco/annotations/instances_val*.json')[0]  # annotations json
+        anno_json = glob.glob('./coco/annotations/instances_val*.json')[0]  # annotations json
         pred_json = str(save_dir / f"{w}_predictions.json")  # predictions json
         print('\nEvaluating pycocotools mAP... saving %s...' % pred_json)
         with open(pred_json, 'w') as f:
@@ -291,7 +292,7 @@ def test(data,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='test.py')
-    parser.add_argument('--weights', nargs='+', type=str, default='yolor_p6.pt', help='model.pt path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default='./yolor_p6.pt', help='model.pt path(s)')
     parser.add_argument('--data', type=str, default='data/coco.yaml', help='*.data path')
     parser.add_argument('--batch-size', type=int, default=32, help='size of each image batch')
     parser.add_argument('--img-size', type=int, default=1280, help='inference size (pixels)')

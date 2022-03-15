@@ -169,6 +169,7 @@ def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
         gain = ratio_pad[0][0]
         pad = ratio_pad[1]
 
+    pad = torch.tensor(pad).to(coords.device)
     coords[:, 0] -= pad[0]  # x padding
     coords[:, 2] -= pad[0]  # x padding
     coords[:, 3] -= pad[1]  # y padding
