@@ -2,3 +2,5 @@ coco
 *.txt
 __pycache__
 runs
+*.pt
+*.log

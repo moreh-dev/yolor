@@ -169,8 +169,10 @@ def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
         gain = ratio_pad[0][0]
         pad = ratio_pad[1]
 
-    coords[:, [0, 2]] -= pad[0]  # x padding
-    coords[:, [1, 3]] -= pad[1]  # y padding
+    coords[:, 0] -= pad[0]  # x padding
+    coords[:, 2] -= pad[0]  # x padding
+    coords[:, 3] -= pad[1]  # y padding
+    coords[:, 1] -= pad[1]  # y padding
     coords[:, :4] /= gain
     clip_coords(coords, img0_shape)
     return coords
@@ -306,14 +308,16 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
             continue
 
         # Compute conf
-        x[:, 5:] *= x[:, 4:5]  # conf = obj_conf * cls_conf
+        x_ = x[:, 4:5].clone()
+        x[:, 5:] *= x_  # conf = obj_conf * cls_conf
 
         # Box (center x, center y, width, height) to (x1, y1, x2, y2)
         box = xywh2xyxy(x[:, :4])
 
         # Detections matrix nx6 (xyxy, conf, cls)
         if multi_label:
-            i, j = torch.transpose(x[:, 5:] > conf_thres, 0, 1).nonzero(as_tuple=False)
+            idx = torch.transpose(x[:, 5:] > conf_thres, 0, 1).nonzero(as_tuple=False)
+            j, i = idx[:, 0], idx[:, 1]
             x = torch.cat((box[i], x[i, j + 5, None], j[:, None].float()), 1)
         else:  # best class only
             conf, j = x[:, 5:].max(1, keepdim=True)
@@ -338,7 +342,8 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
         # Batched NMS
         c = x[:, 5:6] * (0 if agnostic else max_wh)  # classes
         boxes, scores = x[:, :4] + c, x[:, 4]  # boxes (offset by class), scores
-        i = torch.ops.torchvision.nms(boxes, scores, iou_thres)
+
+        i = torch.ops.moreh.nms(boxes, scores, iou_thres)
         if i.shape[0] > max_det:  # limit detections
             i = i[:max_det]
         if merge and (1 < n < 3E3):  # Merge NMS (boxes merged using weighted mean)
